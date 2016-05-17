@@ -21,6 +21,7 @@ import datetime as dt
 import QSTK.qstkutil.DataAccess as da
 import QSTK.qstkutil.tsutil as tsu
 import QSTK.qstkstudy.EventProfiler as ep
+import csv
 
 """
 Accepts a list of symbols along with start and end date
@@ -39,7 +40,7 @@ nan = no information about any event.
 """
 
 
-def find_events(ls_symbols, d_data):
+def find_events(ls_symbols, d_data, event_callback):
     ''' Finding the event dataframe '''
     df_close = d_data['actual_close']
     ts_market = df_close['SPY']
@@ -64,18 +65,44 @@ def find_events(ls_symbols, d_data):
             f_marketreturn_today = (f_marketprice_today / f_marketprice_yest) - 1
 
 
-
-            # if f_symprice_yest >= price and f_symprice_today < price:
-            #     df_events[s_sym].ix[ldt_timestamps[i]] = 1
+            price = 10.0
+            if f_symprice_yest >= price and f_symprice_today < price:
+                event_callback(ldt_timestamps[i], s_sym)
+                df_events[s_sym].ix[ldt_timestamps[i]] = 1
 
             # Event is found if the symbol is down more then 3% while the
             # market is up more then 2%
-            if f_symreturn_today <= -0.03 and f_marketreturn_today >= 0.02:
-                df_events[s_sym].ix[ldt_timestamps[i]] = 1
+            # if f_symreturn_today <= -0.03 and f_marketreturn_today >= 0.02:
+            #     event_callback(ldt_timestamps[i], s_sym)
+            #     df_events[s_sym].ix[ldt_timestamps[i]] = 1
 
     return df_events
 
+def clear_data(keys, data):
+    for s_key in keys:
+        d_data[s_key] = data[s_key].fillna(method='ffill')
+        d_data[s_key] = data[s_key].fillna(method='bfill')
+        d_data[s_key] = data[s_key].fillna(1.0)
 
+def make_event_order_generator(filename):
+    # create the file.
+    order_array = []
+    def write_order(timestamp, symbol):
+        order_array.append([timestamp.year, timestamp.month, timestamp.day,
+                            symbol, "BUY", 100])
+        sell_date = du.getNYSEoffset(timestamp, 5)
+        order_array.append([sell_date.year, sell_date.month, sell_date.day,
+                            symbol, "SELL", 100])
+    def dumper():
+        order_array.sort()
+        print "saving: ", order_array
+        with open(filename, 'wb') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',');
+            for row in order_array:
+                writer.writerow(row)
+
+
+    return write_order, dumper
 
 if __name__ == '__main__':
     dt_start = dt.datetime(2008, 1, 1)
@@ -83,7 +110,7 @@ if __name__ == '__main__':
     ldt_timestamps = du.getNYSEdays(dt_start, dt_end, dt.timedelta(hours=16))
 
     dataobj = da.DataAccess('Yahoo')
-    ls_symbols = dataobj.get_symbols_from_list('sp5002008')
+    ls_symbols = dataobj.get_symbols_from_list('sp5002012')
     ls_symbols.append('SPY')
 
 
@@ -92,41 +119,20 @@ if __name__ == '__main__':
     ldf_data = dataobj.get_data(ldt_timestamps, ls_symbols, ls_keys)
     d_data = dict(zip(ls_keys, ldf_data))
 
-
-
-
     for s_key in ls_keys:
         d_data[s_key] = d_data[s_key].fillna(method='ffill')
         d_data[s_key] = d_data[s_key].fillna(method='bfill')
         d_data[s_key] = d_data[s_key].fillna(1.0)
 
-    df_events = find_events(ls_symbols, d_data)
+    gen_order_callback, saver = make_event_order_generator('orders.txt')
+
+    df_events = find_events(ls_symbols, d_data, gen_order_callback)
+    saver();
 
 
     print "Creating Study"
-    print "df_events: ", df_events
-    print "d_data", d_data
+
     ep.eventprofiler(df_events, d_data, i_lookback=20, i_lookforward=20,
-                s_filename='HomeWork.pdf', b_market_neutral=True, b_errorbars=True,
+                s_filename='MyEventStudy.pdf', b_market_neutral=True, b_errorbars=True,
                 s_market_sym='SPY')
 
-#     ls_symbols_2012 = dataobj.get_symbols_from_list('sp5002012');
-#     ls_symbols_2012.append('SPY')
-#     ls_keys = ['open', 'high', 'low', 'close', 'volume', 'actual_close']
-#     ldf_data2 = dataobj.get_data(ldt_timestamps, ls_symbols_2012, ls_keys);
-#     d_data2 = dict(zip(ls_keys, ldf_data2))
-
-#     for s_key in ls_keys:
-#         d_data2[s_key] = d_data2[s_key].fillna(method='ffill')
-#         d_data2[s_key] = d_data2[s_key].fillna(method='bfill')
-#         d_data2[s_key] = d_data2[s_key].fillna(1.0)
-
-
-# ##    clear_data(ls_keys, ldf_data2)
-#     df_events2 = find_events(ls_symbols_2012, d_data2)
-#     ep.eventprofiler(df_events2, d_data2, i_lookback=20, i_lookforward=20,
-#                 s_filename='HomeWork2012.pdf', b_market_neutral=True, b_errorbars=True,
-#                 s_market_sym='SPY')
-
-
-    

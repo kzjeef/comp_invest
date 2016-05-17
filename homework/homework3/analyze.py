@@ -108,7 +108,7 @@ def do_analysis(values, benchmark_sym):
     print "Data Range :  %s  to  %s" % (ldt_timestamps[0], ldt_timestamps[-1])
     print ""
     print "Sharpe Ratio of Fund : %f" % sharp_ratio_my
-    print "Sharpe Ratio of $SPX : %f" % sharp_ratio_bm
+    print "Sharpe Ratio of $SPX : %fy" % sharp_ratio_bm
     print ""
     print "Total Return of Fund :  %f" % total_ret_my
     print "Total Return of $SPX : %f" % total_ret_bm
@@ -117,7 +117,7 @@ def do_analysis(values, benchmark_sym):
     print "Standard Deviation of $SPX : %f" % stddev_bm
     print ""
     print "Average Daily Return of Fund :  %f" % avg_my
-    print "Average Daily Return of $SPX : %f" % avg_bm
+    print "Average Daily Return of %s : %f" % (benchmark_sym, avg_bm)
 
 
 

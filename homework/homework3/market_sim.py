@@ -84,13 +84,13 @@ def do_sim(init_money, order_array, values_array):
         if order_i < order_max:
             while order_i < order_max and order_executable(order_array[order_i], date):
                 if debug:
-                    print "execute able : ", date, order_array[order_i]
+                    print "executeable : ", date, order_array[order_i]
                 order = order_array[order_i]
                 sym,action,amount = order[3],order[4],order[5]
                 close_price = df_close[sym].ix[date_i]
-                if action == "Buy":
+                if action == "Buy" or action == "BUY":
                     if debug:
-                        print "buy %d", amount
+                        print "buy %d | %f", (amount, close_price)
                     money_hold -= close_price * amount
                     if sym in stock_hold:
                         stock_hold[sym] += amount
@@ -99,7 +99,7 @@ def do_sim(init_money, order_array, values_array):
                     if debug:
                         print "stock hold: ", stock_hold
                         print "money:", money_hold
-                elif action == "Sell":
+                elif action == "Sell" or action == "SELL":
                     if sym in stock_hold:
                         stock_hold[sym] -= amount
                     else:
